@@ -1,7 +1,17 @@
-rootProject.name = "ktor-sample"
-
-dependencyResolutionManagement {
+pluginManagement {
     repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
         mavenCentral()
     }
 }
+
+rootProject.name = "AttendanceApp"
+include(":app")
