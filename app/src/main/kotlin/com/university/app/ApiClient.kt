@@ -24,7 +24,7 @@ object ApiClient {
     }
 
     // REPLACE THIS WITH YOUR LAPTOP'S ACTUAL IP ADDRESS
-    private const val BASE_URL = "http://192.168.1.55:8080" 
+    private const val BASE_URL = "https://zayden-unrecompensed-annie.ngrok-free.dev"
 
     suspend fun performCheckIn(nfcText: String, mood: Int): Boolean {
         return try {

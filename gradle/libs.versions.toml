@@ -2,6 +2,7 @@
 kotlin = "2.3.0"
 ktor = "3.4.0"
 logback = "1.4.14"
+agp = "8.5.0" # Wait! Add this (Check your Studio version, 8.5+ is safe for 2026)
 
 [libraries]
 ktor-server-core = { module = "io.ktor:ktor-server-core-jvm", version.ref = "ktor" }
@@ -11,6 +12,19 @@ ktor-server-config-yaml = { module = "io.ktor:ktor-server-config-yaml", version.
 ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref = "ktor" }
 kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 
+# Wait! You might need these core Android libs too
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version = "1.13.1" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version = "2.8.0" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version = "1.9.0" }
+
 [plugins]
+# Backend
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+
+# Mobile (Wait! Add these lines to fix the crash)
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
