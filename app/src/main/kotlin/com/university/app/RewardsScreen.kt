@@ -1,152 +1,125 @@
 package com.university.app
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.university.app.network.AuthResponse
-import com.university.app.network.RewardTier
-import com.university.app.ui.theme.LeedsGreen
-import com.university.app.ui.theme.White
-import com.university.app.ui.theme.spaceMonoFamily
+import com.university.app.ui.theme.*
+
+data class RewardTier(
+    val tier: Int,
+    val points: Int,
+    val reward: String
+)
+
+val rewardTiers = listOf(
+    RewardTier(1, 100, "- Printing Credits\n- Freeze Streak"),
+    RewardTier(2, 200, "- Double or Nothing"),
+    RewardTier(3, 500, "- GFAL Points"),
+    RewardTier(4, 600, "- Fruitys Tickets"),
+    RewardTier(5, 1400, "- Discounted Gym Membership"),
+    RewardTier(6, 1800, "- Library access")
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RewardsScreen(
-    user: AuthResponse,
-    rewardsViewModel: RewardsViewModel = viewModel(),
-    onBack: () -> Unit
-) {
-    val rewardTiers by rewardsViewModel.rewardTiers.collectAsState()
-
-    LaunchedEffect(Unit) {
-        rewardsViewModel.getRewardTiers(user.userId)
-    }
-
+fun RewardsScreen(currentPoints: Int, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("POINTS: ${user.totalPoints}")
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("x1", style = MaterialTheme.typography.bodySmall)
-                    }
-                },
+                title = { Text("POINTS: $currentPoints") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
-                },
-                actions = {
-                    Image(
-                        painter = painterResource(id = R.drawable.partner_logo_university_of_leeds),
-                        contentDescription = "University of Leeds Logo",
-                        modifier = Modifier
-                            .height(40.dp)
-                            .padding(end = 16.dp)
-                    )
                 }
             )
         }
     ) { padding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black)
+                .background(Black)
                 .padding(padding)
                 .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            Text(
-                text = "Reward Tiers",
-                color = LeedsGreen,
-                fontSize = 32.sp, // <--- REDUCED FROM 56.sp
-                lineHeight = 40.sp, // <--- ADDED LINE HEIGHT
-                fontFamily = spaceMonoFamily,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 30.dp)
-            )
-
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                items(rewardTiers) { tier ->
-                    RewardTierItem(tier)
-                }
+            item {
+                Text(
+                    text = "Reward Tiers",
+                    color = LeedsGreen,
+                    fontSize = 32.sp,
+                    fontFamily = spaceMonoFamily,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(bottom = 20.dp)
+                )
+            }
+            items(rewardTiers) { tier ->
+                RewardTierItem(tier = tier, currentPoints = currentPoints)
             }
         }
     }
 }
 
 @Composable
-fun RewardTierItem(tier: RewardTier) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.padding(horizontal = 8.dp)
+fun RewardTierItem(tier: RewardTier, currentPoints: Int) {
+    val unlocked = currentPoints >= tier.points
+    // Tier 1 should not light up when you have no points
+    val badgeColor = if (unlocked && (tier.tier != 1 || currentPoints > 0)) LeedsGreen else MidGray
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(80.dp)
-                .clip(CircleShape)
-                .background(if (tier.unlocked) LeedsGreen else Color.Gray),
-            contentAlignment = Alignment.Center
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = tier.tier.toString(),
-                color = White,
-                fontSize = 32.sp,
-                fontFamily = spaceMonoFamily,
-                fontWeight = FontWeight.Bold
-            )
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .background(badgeColor, shape = androidx.compose.foundation.shape.CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = tier.tier.toString(),
+                    color = White,
+                    fontSize = 32.sp,
+                    fontFamily = spaceMonoFamily,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.padding(end = 8.dp)) {
+                Text(text = "Tier ${tier.tier}", color = White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text(text = "${tier.points} Points", color = if (unlocked) PointsColor else MidGray, fontSize = 12.sp)
+                Text(text = tier.reward, color = White, fontSize = 11.sp, lineHeight = 16.sp)
+            }
         }
-        Spacer(modifier = Modifier.height(15.dp))
-        Text(
-            text = "Tier ${tier.tier}",
-            color = White,
-            fontSize = 14.sp,
-            fontFamily = spaceMonoFamily,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-        Text(
-            text = tier.reward,
-            color = White,
-            fontSize = 11.sp,
-            fontFamily = spaceMonoFamily,
-            textAlign = TextAlign.Center,
-            lineHeight = 16.sp
-        )
-        Spacer(modifier = Modifier.height(10.dp))
         Button(
             onClick = { /* TODO */ },
+            enabled = unlocked,
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (tier.unlocked) LeedsGreen else Color.Gray,
-                contentColor = White
-            ),
-            shape = RoundedCornerShape(20.dp)
+                containerColor = LeedsGreen,
+                contentColor = White,
+                disabledContainerColor = MidGray
+            )
         ) {
-            Text("Buy", fontSize = 12.sp, fontFamily = spaceMonoFamily, fontWeight = FontWeight.Bold)
+            Text("Buy")
         }
     }
 }

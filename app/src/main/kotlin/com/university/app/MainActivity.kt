@@ -75,7 +75,7 @@ class MainActivity : ComponentActivity() {
                                 onBack = { currentScreen = AppScreen.DASHBOARD }
                             )
                             AppScreen.REWARDS -> RewardsScreen(
-                                user = user,
+                                currentPoints = user.totalPoints,
                                 onBack = { currentScreen = AppScreen.DASHBOARD }
                             )
                             AppScreen.ANALYTICS -> AnalyticsScreen(
