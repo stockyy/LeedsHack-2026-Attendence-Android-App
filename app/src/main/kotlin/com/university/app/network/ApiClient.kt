@@ -26,8 +26,15 @@ data class AuthResponse(
 data class CheckInRequest(
     val nfcCode: String,
     val moodScore: Int,
-    val userID: Int
+    val studentId: Int
 )
+
+enum class CheckInResult {
+    SUCCESS,
+    ALREADY_CHECKED_IN,
+    NETWORK_ERROR,
+    INVALID_TAG
+}
 
 object ApiClient {
     private val client = HttpClient(CIO) {
@@ -64,16 +71,25 @@ object ApiClient {
     /**
      * Sends the NFC scan data to the backend.
      */
-    suspend fun performCheckIn(nfcText: String, mood: Int, userID: Int): Boolean {
+    suspend fun performCheckIn(nfcId: String, mood: Int, studentId: Int): CheckInResult {
         return try {
+            println("ApiClient: Sending Check-in for student $studentId with tag $nfcId")
             val response = client.post("$BASE_URL/api/attendance/checkin") {
                 contentType(ContentType.Application.Json)
-                setBody(CheckInRequest(nfcText, mood, userID))
+                setBody(CheckInRequest(nfcId, mood, studentId))
             }
-            response.status == HttpStatusCode.OK
+            println("ApiClient: Response Status: ${response.status}")
+            
+            when (response.status) {
+                HttpStatusCode.OK, HttpStatusCode.Created -> CheckInResult.SUCCESS
+                HttpStatusCode.Conflict -> CheckInResult.ALREADY_CHECKED_IN
+                HttpStatusCode.BadRequest, HttpStatusCode.NotFound -> CheckInResult.INVALID_TAG
+                else -> CheckInResult.NETWORK_ERROR
+            }
         } catch (e: Exception) {
+            println("ApiClient: Error during check-in: ${e.message}")
             e.printStackTrace()
-            false
+            CheckInResult.NETWORK_ERROR
         }
     }
 }

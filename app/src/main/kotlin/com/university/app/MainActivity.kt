@@ -19,6 +19,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.university.app.network.ApiClient
 import com.university.app.network.AuthResponse
+import com.university.app.network.CheckInResult
 import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
 
@@ -113,6 +114,12 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun CheckInScreen() {
+        // Reset state when the CheckInScreen is loaded
+        LaunchedEffect(Unit) {
+            _scannedTag.value = null
+            _checkInStatus.value = "Ready to Scan"
+        }
+
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center,
@@ -138,10 +145,9 @@ class MainActivity : ComponentActivity() {
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            Button(onClick = {
-                handleScan("COMP2850_LIVE")
-            }) {
-                Text("Simulate Scan (Debug)")
+            // Simulation Button for Testing
+            Button(onClick = { handleScan("COMP2850_LIVE") }) {
+                Text("Test Scan (COMP2850_LIVE)")
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -152,23 +158,24 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun handleScan(tagText: String) {
+    private fun handleScan(tagId: String) {
         val userId = currentUser?.userId ?: return
-        _scannedTag.value = tagText
+        _scannedTag.value = tagId
         _checkInStatus.value = "Sending..."
 
         lifecycleScope.launch {
             val randomMood = (1..5).random()
-            val success = ApiClient.performCheckIn(
-                nfcText = tagText,
+            val result = ApiClient.performCheckIn(
+                nfcId = tagId,
                 mood = randomMood,
-                userID = userId
+                studentId = userId
             )
 
-            if (success) {
-                _checkInStatus.value = "✅ SUCCESS! (+10 pts)"
-            } else {
-                _checkInStatus.value = "❌ Network Error or Invalid Tag"
+            _checkInStatus.value = when (result) {
+                CheckInResult.SUCCESS -> "✅ SUCCESS! (+10 pts)"
+                CheckInResult.ALREADY_CHECKED_IN -> "ℹ️ Already Checked In"
+                CheckInResult.INVALID_TAG -> "❌ Invalid Tag"
+                CheckInResult.NETWORK_ERROR -> "⚠️ Network Error"
             }
         }
     }
@@ -196,7 +203,6 @@ class MainActivity : ComponentActivity() {
 
             val tag: Tag? = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)
             tag?.let {
-                // Use getUniqueId to get the hardware ID (UID) for cards like Mastercard
                 val id = NfcManager.getUniqueId(it)
                 handleScan(id)
             }
