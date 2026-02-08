@@ -5,91 +5,166 @@ import android.content.Intent
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.os.Bundle
-import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.* // Using Material 3
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.university.app.network.ApiClient
-import com.university.app.NfcManager // Fixed import
-import kotlinx.coroutines.launch // You might need to add this import
-import androidx.lifecycle.lifecycleScope // AND this one
+import com.university.app.network.AuthResponse
+import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
 
 class MainActivity : ComponentActivity() {
-    // 1. We declare the variables here so we can use them later
     private var nfcAdapter: NfcAdapter? = null
 
-    // 2. These store our app's state
-    private val _scannedTag = mutableStateOf<String?>(null)
-    private val _checkInStatus = mutableStateOf("Ready to Scan")
+    // App State
+    private var currentUser by mutableStateOf<AuthResponse?>(null)
+    private var _scannedTag = mutableStateOf<String?>(null)
+    private var _checkInStatus = mutableStateOf("Ready to Scan")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // 3. Initialize the NFC Adapter
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
 
         setContent {
-            // This is a simple Hackathon Theme wrapper
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-
-                    // The UI Layout
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        // Title
-                        Text(
-                            text = _checkInStatus.value,
-                            style = MaterialTheme.typography.headlineMedium // Fixed: h4 -> headlineMedium
-                        )
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        // Status Message
-                        if (_scannedTag.value != null) {
-                            Text(text = "Scanned Tag: ${_scannedTag.value}")
-                        } else {
-                            Text(text = "Please tap your phone on a class NFC tag.")
-                        }
-
-                        Spacer(modifier = Modifier.height(40.dp))
-
-                        // SAFETY BUTTON: Use this if NFC fails during the demo!
-                        Button(onClick = {
-                            handleScan("COMP2850_LIVE")
-                        }) {
-                            Text("Simulate Scan (Debug)")
-                        }
+                    if (currentUser == null) {
+                        SignInScreen(onSignInSuccess = { user ->
+                            currentUser = user
+                        })
+                    } else {
+                        CheckInScreen()
                     }
                 }
             }
         }
     }
 
-    // 4. This function handles the logic when a tag is found
+    @Composable
+    fun SignInScreen(onSignInSuccess: (AuthResponse) -> Unit) {
+        var email by remember { mutableStateOf("") }
+        var password by remember { mutableStateOf("") }
+        var isLoading by remember { mutableStateOf(false) }
+        val scope = rememberCoroutineScope()
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = "University Login", style = MaterialTheme.typography.headlineLarge)
+            Spacer(modifier = Modifier.height(32.dp))
+
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email") },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Password") },
+                modifier = Modifier.fillMaxWidth(),
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            if (isLoading) {
+                CircularProgressIndicator()
+            } else {
+                Button(
+                    onClick = {
+                        isLoading = true
+                        scope.launch {
+                            val response = ApiClient.signIn(email, password)
+                            isLoading = false
+                            if (response != null) {
+                                onSignInSuccess(response)
+                            } else {
+                                Toast.makeText(this@MainActivity, "Invalid credentials", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Sign In")
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun CheckInScreen() {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Welcome, ${currentUser?.userName}",
+                style = MaterialTheme.typography.titleLarge
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = _checkInStatus.value,
+                style = MaterialTheme.typography.headlineMedium
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            if (_scannedTag.value != null) {
+                Text(text = "Scanned Tag: ${_scannedTag.value}")
+            } else {
+                Text(text = "Please tap your phone on a class NFC tag.")
+            }
+
+            Spacer(modifier = Modifier.height(40.dp))
+
+            Button(onClick = {
+                handleScan("COMP2850_LIVE")
+            }) {
+                Text("Simulate Scan (Debug)")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextButton(onClick = { currentUser = null }) {
+                Text("Logout")
+            }
+        }
+    }
+
     private fun handleScan(tagText: String) {
+        val userId = currentUser?.userId ?: return
         _scannedTag.value = tagText
         _checkInStatus.value = "Sending..."
 
-        // Use lifecycleScope to run this in the background
         lifecycleScope.launch {
-            // 1. Random mood for demo purposes (since we don't have a UI slider for it yet)
             val randomMood = (1..5).random()
-
-            // 2. Actually call the server
             val success = ApiClient.performCheckIn(
                 nfcText = tagText,
-                mood = randomMood
+                mood = randomMood,
+                userID = userId
             )
 
-            // 3. Update UI based on result
             if (success) {
                 _checkInStatus.value = "✅ SUCCESS! (+10 pts)"
             } else {
@@ -100,7 +175,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Enable priority reading when app is open
         val intent = Intent(this, javaClass).apply {
             addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
@@ -115,16 +189,16 @@ class MainActivity : ComponentActivity() {
         nfcAdapter?.disableForegroundDispatch(this)
     }
 
-    // This triggers when a real physical tag is tapped
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (NfcAdapter.ACTION_NDEF_DISCOVERED == intent.action ||
-            NfcAdapter.ACTION_TAG_DISCOVERED == intent.action) {
+        if (currentUser != null && (NfcAdapter.ACTION_NDEF_DISCOVERED == intent.action ||
+            NfcAdapter.ACTION_TAG_DISCOVERED == intent.action)) {
 
             val tag: Tag? = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)
             tag?.let {
-                val text = NfcManager.getTextFromNfc(it) ?: "Unknown Tag"
-                handleScan(text)
+                // Use getUniqueId to get the hardware ID (UID) for cards like Mastercard
+                val id = NfcManager.getUniqueId(it)
+                handleScan(id)
             }
         }
     }
