@@ -8,10 +8,15 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.university.app.network.ApiClient
 import com.university.app.network.AuthResponse
@@ -19,11 +24,18 @@ import com.university.app.network.CheckInResult
 import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
 
+enum class AppScreen {
+    CHECK_IN,
+    QUIZ,
+    STATS
+}
+
 class MainActivity : ComponentActivity() {
     private var nfcAdapter: NfcAdapter? = null
 
     // App State
     private var currentUser by mutableStateOf<AuthResponse?>(null)
+    private var currentScreen by mutableStateOf(AppScreen.CHECK_IN)
     private var _scannedTag = mutableStateOf<String?>(null)
     private var _checkInStatus = mutableStateOf("Ready to Scan")
 
@@ -34,12 +46,24 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    if (currentUser == null) {
-                        LoginScreen(onLoginSuccess = { user ->
-                            currentUser = user
+                    val user = currentUser
+                    if (user == null) {
+                        LoginScreen(onLoginSuccess = { loggedInUser ->
+                            currentUser = loggedInUser
+                            currentScreen = AppScreen.CHECK_IN
                         })
                     } else {
-                        CheckInScreen()
+                        when (currentScreen) {
+                            AppScreen.CHECK_IN -> CheckInScreen(user)
+                            AppScreen.QUIZ -> QuizScreen(
+                                studentId = user.userId,
+                                onBack = { currentScreen = AppScreen.CHECK_IN }
+                            )
+                            AppScreen.STATS -> StatsScreen(
+                                studentId = user.userId,
+                                onBack = { currentScreen = AppScreen.CHECK_IN }
+                            )
+                        }
                     }
                 }
             }
@@ -47,7 +71,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun CheckInScreen() {
+    fun CheckInScreen(user: AuthResponse) {
         // Reset state when the CheckInScreen is loaded
         LaunchedEffect(Unit) {
             _scannedTag.value = null
@@ -55,12 +79,12 @@ class MainActivity : ComponentActivity() {
         }
 
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().padding(16.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Welcome, ${currentUser?.userName}",
+                text = "Welcome, ${user.userName}",
                 style = MaterialTheme.typography.titleLarge
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -77,17 +101,58 @@ class MainActivity : ComponentActivity() {
                 Text(text = "Please tap your phone on a class NFC tag.")
             }
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             // Simulation Button for Testing
-            Button(onClick = { handleScan("COMP2850_LIVE") }) {
+            Button(
+                onClick = { handleScan("COMP2850_LIVE") },
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Text("Test Scan (COMP2850_LIVE)")
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Quiz and Stats Buttons
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ActionCard(
+                    title = "Take Quiz",
+                    icon = Icons.Default.Assignment,
+                    modifier = Modifier.weight(1f),
+                    onClick = { currentScreen = AppScreen.QUIZ }
+                )
+                ActionCard(
+                    title = "My Stats",
+                    icon = Icons.Default.BarChart,
+                    modifier = Modifier.weight(1f),
+                    onClick = { currentScreen = AppScreen.STATS }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             TextButton(onClick = { currentUser = null }) {
+                Icon(Icons.Default.Logout, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
                 Text("Logout")
+            }
+        }
+    }
+
+    @Composable
+    fun ActionCard(title: String, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
+        ElevatedCard(
+            onClick = onClick,
+            modifier = modifier.height(100.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = title, style = MaterialTheme.typography.labelLarge)
             }
         }
     }

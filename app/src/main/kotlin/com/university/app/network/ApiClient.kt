@@ -92,4 +92,62 @@ object ApiClient {
             CheckInResult.NETWORK_ERROR
         }
     }
+
+    /**
+     * Fetches the available quiz for a student.
+     */
+    suspend fun getAvailableQuiz(studentId: Int): Quiz? {
+        return try {
+            val response = client.get("$BASE_URL/api/quiz/available") {
+                parameter("studentId", studentId)
+            }
+            if (response.status == HttpStatusCode.OK) {
+                response.body<Quiz>()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
+     * Submits quiz answers to the backend.
+     */
+    suspend fun submitQuiz(submission: QuizSubmission): QuizResponse? {
+        return try {
+            val response = client.post("$BASE_URL/api/quiz/submit") {
+                contentType(ContentType.Application.Json)
+                setBody(submission)
+            }
+            if (response.status == HttpStatusCode.OK) {
+                response.body<QuizResponse>()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
+     * Fetches student statistics.
+     */
+    suspend fun getStudentStats(studentId: Int): StudentStats? {
+        return try {
+            val response = client.get("$BASE_URL/api/stats/student") {
+                parameter("studentId", studentId)
+            }
+            if (response.status == HttpStatusCode.OK) {
+                response.body<StudentStats>()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
 }
