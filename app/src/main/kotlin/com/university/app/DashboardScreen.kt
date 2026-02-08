@@ -35,9 +35,17 @@ val Black = Color(0xFF0A0A0A)
 val MidGray = Color(0xFFE0E0E0)
 
 @Composable
-fun DashboardScreen(user: AuthResponse, onLogout: () -> Unit) {
-    var points by remember { mutableIntStateOf(0) }
-    var multiplier by remember { mutableIntStateOf(1) }
+fun DashboardScreen(
+    user: AuthResponse,
+    onLogout: () -> Unit,
+    points: Int,
+    multiplier: Int,
+    checkInStatus: String,
+    scannedTag: String?,
+    onPointsAdded: (Int) -> Unit,
+    onResetStats: () -> Unit,
+    onScanSimulated: (String) -> Unit
+) {
     var activePage by remember { mutableStateOf("home") }
 
     val tierData = listOf(
@@ -55,7 +63,7 @@ fun DashboardScreen(user: AuthResponse, onLogout: () -> Unit) {
                 points = points,
                 multiplier = multiplier,
                 onBack = { if (activePage != "home") activePage = "home" },
-                onReset = { points = 0; multiplier = 1 }
+                onReset = onResetStats
             )
         },
         containerColor = Black
@@ -67,11 +75,17 @@ fun DashboardScreen(user: AuthResponse, onLogout: () -> Unit) {
                     onLogout = onLogout
                 )
                 "faceScan" -> FaceScanPage(onScanSuccess = {
-                    points += 50 * multiplier
+                    onPointsAdded(50 * multiplier)
                     activePage = "home"
                 })
+                "checkInScreen" -> CheckInPage(
+                    user = user,
+                    status = checkInStatus,
+                    tag = scannedTag,
+                    onScanSimulated = onScanSimulated
+                )
                 "rewards" -> RewardsPage(tierData, points) { cost ->
-                    if (points >= cost) points -= cost
+                    if (points >= cost) onPointsAdded(-cost)
                 }
                 "analytics" -> AnalyticsPage(points)
             }
@@ -162,7 +176,7 @@ fun HomePage(onNavigate: (String) -> Unit, onLogout: () -> Unit) {
         val items = listOf(
             HomeTileData("1", "Face Scan", "faceScan"),
             HomeTileData("2", "Locked", null),
-            HomeTileData("3", "Check In", "checkIn"),
+            HomeTileData("3", "Check In", "checkInScreen"),
             HomeTileData("4", "Coming Soon", null),
             HomeTileData("5", "Rewards", "rewards"),
             HomeTileData("6", "Analytics", "analytics")
@@ -257,6 +271,75 @@ fun FaceScanPage(onScanSuccess: () -> Unit) {
             Text("START SCAN", fontWeight = FontWeight.Bold)
         }
         Text(status, modifier = Modifier.padding(top = 20.dp), color = LeedsGreen)
+    }
+}
+
+@Composable
+fun CheckInPage(
+    user: AuthResponse,
+    status: String,
+    tag: String?,
+    onScanSimulated: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("NFC Check-In", fontSize = 32.sp, color = LeedsGreen, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Logged in as ${user.userName}", color = Color.White.copy(alpha = 0.7f), fontSize = 16.sp)
+        
+        Spacer(modifier = Modifier.height(48.dp))
+        
+        Box(
+            modifier = Modifier
+                .size(220.dp)
+                .background(LeedsGreen.copy(alpha = 0.2f), RoundedCornerShape(24.dp))
+                .border(2.dp, LeedsGreen, RoundedCornerShape(24.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.Nfc, 
+                contentDescription = null, 
+                modifier = Modifier.size(100.dp), 
+                tint = if (status.contains("SUCCESS")) PointsColor else LeedsGreen
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(48.dp))
+        
+        Text(
+            text = status,
+            fontSize = 24.sp,
+            color = if (status.contains("SUCCESS")) PointsColor else Color.White,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+        
+        if (tag != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = "ID: $tag", color = Color.Gray, fontSize = 14.sp)
+        }
+
+        Spacer(modifier = Modifier.height(48.dp))
+
+        Button(
+            onClick = { onScanSimulated("COMP2850_LIVE") },
+            colors = ButtonDefaults.buttonColors(containerColor = LeedsGreen),
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("SIMULATE CLASS SCAN", fontWeight = FontWeight.Bold, color = Color.White)
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            "Or tap your device against a physical NFC tag",
+            color = Color.White.copy(alpha = 0.5f),
+            fontSize = 12.sp,
+            textAlign = TextAlign.Center
+        )
     }
 }
 

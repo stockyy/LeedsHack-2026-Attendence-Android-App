@@ -24,8 +24,10 @@ class MainActivity : ComponentActivity() {
 
     // App State
     private var currentUser by mutableStateOf<AuthResponse?>(null)
-    private var _scannedTag = mutableStateOf<String?>(null)
-    private var _checkInStatus = mutableStateOf("Ready to Scan")
+    private var points by mutableIntStateOf(0)
+    private var multiplier by mutableIntStateOf(1)
+    private var scannedTag by mutableStateOf<String?>(null)
+    private var checkInStatus by mutableStateOf("Ready to Scan")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,7 +44,19 @@ class MainActivity : ComponentActivity() {
                     } else {
                         DashboardScreen(
                             user = user,
-                            onLogout = { currentUser = null }
+                            onLogout = { currentUser = null },
+                            points = points,
+                            multiplier = multiplier,
+                            checkInStatus = checkInStatus,
+                            scannedTag = scannedTag,
+                            onPointsAdded = { points += it },
+                            onResetStats = {
+                                points = 0
+                                multiplier = 1
+                                scannedTag = null
+                                checkInStatus = "Ready to Scan"
+                            },
+                            onScanSimulated = { handleScan(it) }
                         )
                     }
                 }
@@ -50,56 +64,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @Composable
-    fun CheckInScreen() {
-        // Reset state when the CheckInScreen is loaded
-        LaunchedEffect(Unit) {
-            _scannedTag.value = null
-            _checkInStatus.value = "Ready to Scan"
-        }
-
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Welcome, ${currentUser?.userName}",
-                style = MaterialTheme.typography.titleLarge
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = _checkInStatus.value,
-                style = MaterialTheme.typography.headlineMedium
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            if (_scannedTag.value != null) {
-                Text(text = "Scanned Tag: ${_scannedTag.value}")
-            } else {
-                Text(text = "Please tap your phone on a class NFC tag.")
-            }
-
-            Spacer(modifier = Modifier.height(40.dp))
-
-            // Simulation Button for Testing
-            Button(onClick = { handleScan("COMP2850_LIVE") }) {
-                Text("Test Scan (COMP2850_LIVE)")
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            TextButton(onClick = { currentUser = null }) {
-                Text("Logout")
-            }
-        }
-    }
-
     private fun handleScan(tagId: String) {
         val userId = currentUser?.userId ?: return
-        _scannedTag.value = tagId
-        _checkInStatus.value = "Sending..."
+        scannedTag = tagId
+        checkInStatus = "Sending..."
 
         lifecycleScope.launch {
             val randomMood = (1..5).random()
@@ -109,8 +77,11 @@ class MainActivity : ComponentActivity() {
                 studentId = userId
             )
 
-            _checkInStatus.value = when (result) {
-                CheckInResult.SUCCESS -> "✅ SUCCESS! (+10 pts)"
+            checkInStatus = when (result) {
+                CheckInResult.SUCCESS -> {
+                    points += 10 * multiplier
+                    "✅ SUCCESS! (+${10 * multiplier} pts)"
+                }
                 CheckInResult.ALREADY_CHECKED_IN -> "ℹ️ Already Checked In"
                 CheckInResult.INVALID_TAG -> "❌ Invalid Tag"
                 CheckInResult.NETWORK_ERROR -> "⚠️ Network Error"
