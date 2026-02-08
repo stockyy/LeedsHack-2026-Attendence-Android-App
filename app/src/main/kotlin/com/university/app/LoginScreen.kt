@@ -21,24 +21,17 @@ fun LoginScreen(onLoginSuccess: (AuthResponse) -> Unit) {
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-
-    // State for password visibility
     var passwordVisible by remember { mutableStateOf(false) }
-
     val scope = rememberCoroutineScope()
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
+        modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(text = "Student Login", style = MaterialTheme.typography.headlineLarge)
-
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Email Field
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
@@ -46,10 +39,8 @@ fun LoginScreen(onLoginSuccess: (AuthResponse) -> Unit) {
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
-
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Password Field with Visibility Toggle
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
@@ -59,18 +50,12 @@ fun LoginScreen(onLoginSuccess: (AuthResponse) -> Unit) {
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             trailingIcon = {
-                val image = if (passwordVisible)
-                    Icons.Filled.Visibility
-                else
-                    Icons.Filled.VisibilityOff
-
-                // The button to toggle visibility
+                val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Icon(imageVector = image, contentDescription = "Toggle Password Visibility")
                 }
             }
         )
-
         Spacer(modifier = Modifier.height(24.dp))
 
         if (isLoading) {
@@ -81,14 +66,16 @@ fun LoginScreen(onLoginSuccess: (AuthResponse) -> Unit) {
                     scope.launch {
                         isLoading = true
                         errorMessage = null
-                        // Call the API
-                        val user = ApiClient.signIn(email, password)
-                        if (user != null) {
-                            // Success! Trigger the callback with the full user object
+
+                        // --- FIX STARTS HERE ---
+                        val result = ApiClient.signIn(email, password)
+                        result.onSuccess { user ->
                             onLoginSuccess(user)
-                        } else {
+                        }.onFailure {
                             errorMessage = "Invalid email or password"
                         }
+                        // --- FIX ENDS HERE ---
+
                         isLoading = false
                     }
                 },

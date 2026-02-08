@@ -13,9 +13,14 @@ class RewardsViewModel : ViewModel() {
     private val _rewardTiers = MutableStateFlow<List<RewardTier>>(emptyList())
     val rewardTiers: StateFlow<List<RewardTier>> = _rewardTiers
 
-    fun getRewardTiers() {
+    // Updated to accept studentId
+    fun getRewardTiers(studentId: Int) {
         viewModelScope.launch {
-            _rewardTiers.value = ApiClient.getRewardTiers()
+            try {
+                _rewardTiers.value = ApiClient.getRewardTiers(studentId)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 }
