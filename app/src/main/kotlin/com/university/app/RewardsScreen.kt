@@ -1,5 +1,6 @@
 package com.university.app
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -14,11 +15,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.university.app.network.AuthResponse
 import com.university.app.network.RewardTier
 import com.university.app.ui.theme.LeedsGreen
 import com.university.app.ui.theme.White
@@ -27,27 +30,40 @@ import com.university.app.ui.theme.spaceMonoFamily
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RewardsScreen(
-    studentId: Int, // <--- ADDED THIS PARAMETER
+    user: AuthResponse,
     rewardsViewModel: RewardsViewModel = viewModel(),
     onBack: () -> Unit
 ) {
     val rewardTiers by rewardsViewModel.rewardTiers.collectAsState()
 
-    // Pass studentId to the fetch function
     LaunchedEffect(Unit) {
-        rewardsViewModel.getRewardTiers(studentId)
+        rewardsViewModel.getRewardTiers(user.userId)
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Rewards", fontFamily = spaceMonoFamily, color = White) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = White)
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("POINTS: ${user.totalPoints}")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("x1", style = MaterialTheme.typography.bodySmall)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    Image(
+                        painter = painterResource(id = R.drawable.partner_logo_university_of_leeds),
+                        contentDescription = "University of Leeds Logo",
+                        modifier = Modifier
+                            .height(40.dp)
+                            .padding(end = 16.dp)
+                    )
+                }
             )
         }
     ) { padding ->
@@ -62,10 +78,12 @@ fun RewardsScreen(
             Text(
                 text = "Reward Tiers",
                 color = LeedsGreen,
-                fontSize = 56.sp,
+                fontSize = 32.sp, // <--- REDUCED FROM 56.sp
+                lineHeight = 40.sp, // <--- ADDED LINE HEIGHT
                 fontFamily = spaceMonoFamily,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 50.dp)
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = 30.dp)
             )
 
             LazyRow(

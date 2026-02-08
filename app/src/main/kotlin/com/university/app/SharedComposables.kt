@@ -2,9 +2,11 @@
 package com.university.app
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -29,31 +31,139 @@ import com.university.app.ui.theme.White
 import com.university.app.ui.theme.spaceMonoFamily
 
 @Composable
-fun Chart(title: String) {
+fun ModuleAttendanceChart() {
+    val moduleAttendance = mapOf(
+        "COMP2850" to 85,
+        "COMP2860" to 70,
+        "COMP2870" to 95
+    )
+
     Column(
         modifier = Modifier
+            .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
             .background(Color(0x1A00502F))
-            .padding(30.dp),
+            .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = title,
+            text = "Attendance by Module",
             color = LeedsGreen,
             fontSize = 24.sp,
             fontFamily = spaceMonoFamily,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 20.dp)
         )
-        // Placeholder for chart
-        Box(
-            modifier = Modifier
-                .width(400.dp)
-                .height(250.dp)
-                .background(Color.DarkGray)
-        )
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            moduleAttendance.forEach { (module, percentage) ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = module,
+                        color = White,
+                        fontFamily = spaceMonoFamily,
+                        modifier = Modifier.width(100.dp)
+                    )
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(24.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.DarkGray)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(fraction = percentage / 100f)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(LeedsGreen)
+                        )
+                    }
+                    Text(
+                        text = "$percentage%",
+                        color = White,
+                        fontFamily = spaceMonoFamily,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier
+                            .width(50.dp)
+                            .padding(start = 8.dp)
+                    )
+                }
+            }
+        }
     }
 }
+
+@Composable
+fun AttendanceOverTimeChart() {
+    val attendanceOverTime = mapOf(
+        "Sep" to 80,
+        "Oct" to 85,
+        "Nov" to 75,
+        "Dec" to 70,
+        "Jan" to 88,
+        "Feb" to 90,
+        "Mar" to 92
+    )
+    val maxValue = attendanceOverTime.values.maxOrNull() ?: 100
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color(0x1A00502F))
+            .padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Attendance Over Time",
+            color = LeedsGreen,
+            fontSize = 24.sp,
+            fontFamily = spaceMonoFamily,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 20.dp)
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            attendanceOverTime.forEach { (month, value) ->
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "$value",
+                        color = White,
+                        fontSize = 10.sp,
+                        fontFamily = spaceMonoFamily,
+                    )
+                    Box(
+                        modifier = Modifier
+                            .width(30.dp) // Bar width
+                            .height((value.toFloat() / maxValue.toFloat() * 150).dp) // Bar height calculation
+                            .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                            .background(LeedsGreen)
+                    )
+                    Text(
+                        text = month,
+                        color = White,
+                        fontSize = 12.sp,
+                        fontFamily = spaceMonoFamily,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
 
 @Composable
 fun Leaderboard(leaderboardItems: List<LeaderboardItem>) {

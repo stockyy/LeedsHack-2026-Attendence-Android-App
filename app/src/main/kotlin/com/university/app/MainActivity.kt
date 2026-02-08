@@ -67,19 +67,19 @@ class MainActivity : ComponentActivity() {
                             AppScreen.DASHBOARD -> DashboardScreen(user)
                             AppScreen.NFC_SCANNER -> NfcScannerScreen(user) { currentScreen = AppScreen.DASHBOARD }
                             AppScreen.QUIZ -> QuizScreen(
-                                studentId = user.userId,
+                                user = user,
                                 onBack = { currentScreen = AppScreen.DASHBOARD }
                             )
-                            AppScreen.TIMETABLE -> TimetableScreen { currentScreen = AppScreen.DASHBOARD }
-
-                            // --- FIXED SECTION START ---
+                            AppScreen.TIMETABLE -> TimetableScreen(
+                                user = user,
+                                onBack = { currentScreen = AppScreen.DASHBOARD }
+                            )
                             AppScreen.REWARDS -> RewardsScreen(
-                                studentId = user.userId, // <--- ADDED THIS TO FIX THE ERROR
+                                user = user,
                                 onBack = { currentScreen = AppScreen.DASHBOARD }
                             )
-                            // --- FIXED SECTION END ---
-
                             AppScreen.ANALYTICS -> AnalyticsScreen(
+                                user = user,
                                 onBack = { currentScreen = AppScreen.DASHBOARD }
                             )
 

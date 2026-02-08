@@ -1,60 +1,94 @@
 package com.university.app
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.university.app.network.*
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QuizScreen(studentId: Int, onBack: () -> Unit) {
+fun QuizScreen(user: AuthResponse, onBack: () -> Unit) {
     var quiz by remember { mutableStateOf<Quiz?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var userAnswers by remember { mutableStateOf<MutableMap<Int, MutableSet<Int>>>(mutableMapOf()) }
     var submissionResult by remember { mutableStateOf<QuizResponse?>(null) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(studentId) {
-        quiz = ApiClient.getAvailableQuiz(studentId)
+    LaunchedEffect(user.userId) {
+        quiz = ApiClient.getAvailableQuiz(user.userId)
         isLoading = false
     }
 
-    if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("POINTS: ${user.totalPoints}")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("x1", style = MaterialTheme.typography.bodySmall)
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    Image(
+                        painter = painterResource(id = R.drawable.partner_logo_university_of_leeds),
+                        contentDescription = "University of Leeds Logo",
+                        modifier = Modifier
+                            .height(40.dp)
+                            .padding(end = 16.dp)
+                    )
+                }
+            )
         }
-    } else if (submissionResult != null) {
-        QuizResultView(submissionResult!!, onBack)
-    } else if (quiz == null) {
-        NoQuizView(onBack)
-    } else {
-        QuizContentView(
-            quiz = quiz!!,
-            userAnswers = userAnswers,
-            onAnswerChange = { questionId, optionIndex, checked ->
-                val currentAnswers = userAnswers.getOrDefault(questionId, mutableSetOf()).toMutableSet()
-                if (checked) currentAnswers.add(optionIndex) else currentAnswers.remove(optionIndex)
-                userAnswers = userAnswers.toMutableMap().apply { put(questionId, currentAnswers) }
-            },
-            onSubmit = {
-                val submission = QuizSubmission(
-                    quizId = quiz!!.quizId,
-                    studentId = studentId,
-                    answers = quiz!!.questions.map { q ->
-                        userAnswers[q.questionId]?.toList() ?: emptyList()
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (submissionResult != null) {
+                QuizResultView(submissionResult!!, onBack)
+            } else if (quiz == null) {
+                NoQuizView(onBack)
+            } else {
+                QuizContentView(
+                    quiz = quiz!!,
+                    userAnswers = userAnswers,
+                    onAnswerChange = { questionId, optionIndex, checked ->
+                        val currentAnswers = userAnswers.getOrDefault(questionId, mutableSetOf()).toMutableSet()
+                        if (checked) currentAnswers.add(optionIndex) else currentAnswers.remove(optionIndex)
+                        userAnswers = userAnswers.toMutableMap().apply { put(questionId, currentAnswers) }
+                    },
+                    onSubmit = {
+                        val submission = QuizSubmission(
+                            quizId = quiz!!.quizId,
+                            studentId = user.userId,
+                            answers = quiz!!.questions.map { q ->
+                                userAnswers[q.questionId]?.toList() ?: emptyList()
+                            }
+                        )
+                        scope.launch {
+                            submissionResult = ApiClient.submitQuiz(submission)
+                        }
                     }
                 )
-                scope.launch {
-                    submissionResult = ApiClient.submitQuiz(submission)
-                }
-            },
-            onBack = onBack
-        )
+            }
+        }
     }
 }
 
@@ -63,8 +97,7 @@ fun QuizContentView(
     quiz: Quiz,
     userAnswers: Map<Int, Set<Int>>,
     onAnswerChange: (Int, Int, Boolean) -> Unit,
-    onSubmit: () -> Unit,
-    onBack: () -> Unit
+    onSubmit: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text(text = quiz.title, style = MaterialTheme.typography.headlineMedium)
@@ -85,8 +118,7 @@ fun QuizContentView(
             }
         }
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            TextButton(onClick = onBack) { Text("Back") }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Button(onClick = onSubmit) { Text("Submit Quiz") }
         }
     }
