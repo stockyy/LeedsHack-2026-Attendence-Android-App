@@ -6,3 +6,4 @@ plugins {
     alias(libs.plugins.compose.compiler) apply false
     // You don't need the Ktor plugin here for the Android app, usually just the backend
 }
+

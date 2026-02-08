@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
 
                         // SAFETY BUTTON: Use this if NFC fails during the demo!
                         Button(onClick = {
-                            handleScan("COMP2850_DEMO_TAG")
+                            handleScan("COMP2850_LIVE")
                         }) {
                             Text("Simulate Scan (Debug)")
                         }
