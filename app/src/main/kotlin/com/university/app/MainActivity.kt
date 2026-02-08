@@ -14,20 +14,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.university.app.network.ApiClient
-import androidx.lifecycle.lifecycleScope
+import com.university.app.network.AuthResponse
+import com.university.app.network.CheckInResult
 import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
 
 class MainActivity : ComponentActivity() {
     private var nfcAdapter: NfcAdapter? = null
 
-    // APP STATE
-    // -1 means not logged in
-    private val _loggedInUserId = mutableStateOf<Int?>(null)
-    private val _loggedInUserName = mutableStateOf<String>("")
-
-    // NFC STATE
-    private val _scannedTag = mutableStateOf<String?>(null)
-    private val _checkInStatus = mutableStateOf("Ready to Scan")
+    // App State
+    private var currentUser by mutableStateOf<AuthResponse?>(null)
+    private var _scannedTag = mutableStateOf<String?>(null)
+    private var _checkInStatus = mutableStateOf("Ready to Scan")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,17 +34,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-
-                    // NAVIGATION LOGIC
-                    if (_loggedInUserId.value == null) {
-                        // 1. Show Login Screen
-                        LoginScreen(onLoginSuccess = { userId, name ->
-                            _loggedInUserId.value = userId
-                            _loggedInUserName.value = name
+                    if (currentUser == null) {
+                        LoginScreen(onLoginSuccess = { user ->
+                            currentUser = user
                         })
                     } else {
-                        // 2. Show NFC Screen (User is logged in)
-                        NfcScreen()
+                        CheckInScreen()
                     }
                 }
             }
@@ -54,18 +47,23 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun NfcScreen() {
+    fun CheckInScreen() {
+        // Reset state when the CheckInScreen is loaded
+        LaunchedEffect(Unit) {
+            _scannedTag.value = null
+            _checkInStatus.value = "Ready to Scan"
+        }
+
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Welcome, ${_loggedInUserName.value}!",
-                style = MaterialTheme.typography.titleMedium
+                text = "Welcome, ${currentUser?.userName}",
+                style = MaterialTheme.typography.titleLarge
             )
-            Spacer(modifier = Modifier.height(10.dp))
-
+            Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = _checkInStatus.value,
                 style = MaterialTheme.typography.headlineMedium
@@ -81,47 +79,46 @@ class MainActivity : ComponentActivity() {
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // Debug Button
+            // Simulation Button for Testing
             Button(onClick = { handleScan("COMP2850_LIVE") }) {
-                Text("Simulate Scan (Debug)")
+                Text("Test Scan (COMP2850_LIVE)")
             }
 
-            // Logout Button (Optional but useful)
-            Spacer(modifier = Modifier.height(20.dp))
-            TextButton(onClick = { _loggedInUserId.value = null }) {
-                Text("Log Out")
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextButton(onClick = { currentUser = null }) {
+                Text("Logout")
             }
         }
     }
 
-    private fun handleScan(tagText: String) {
-        val userId = _loggedInUserId.value ?: return // Don't scan if not logged in
-
-        _scannedTag.value = tagText
+    private fun handleScan(tagId: String) {
+        val userId = currentUser?.userId ?: return
+        _scannedTag.value = tagId
         _checkInStatus.value = "Sending..."
 
         lifecycleScope.launch {
             val randomMood = (1..5).random()
-
-            // Pass the REAL userId now!
-            val success = ApiClient.performCheckIn(
-                nfcText = tagText,
+            val result = ApiClient.performCheckIn(
+                nfcId = tagId,
                 mood = randomMood,
-                userId = userId
+                studentId = userId
             )
 
-            if (success) {
-                _checkInStatus.value = "✅ SUCCESS! (+10 pts)"
-            } else {
-                _checkInStatus.value = "❌ Network Error or Invalid Tag"
+            _checkInStatus.value = when (result) {
+                CheckInResult.SUCCESS -> "✅ SUCCESS! (+10 pts)"
+                CheckInResult.ALREADY_CHECKED_IN -> "ℹ️ Already Checked In"
+                CheckInResult.INVALID_TAG -> "❌ Invalid Tag"
+                CheckInResult.NETWORK_ERROR -> "⚠️ Network Error"
             }
         }
     }
 
-    // --- Standard NFC Boilerplate below (Keep existing onResume/onPause/onNewIntent) ---
     override fun onResume() {
         super.onResume()
-        val intent = Intent(this, javaClass).apply { addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP) }
+        val intent = Intent(this, javaClass).apply {
+            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
         val pendingIntent = PendingIntent.getActivity(
             this, 0, intent, PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
@@ -135,12 +132,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (NfcAdapter.ACTION_NDEF_DISCOVERED == intent.action ||
-            NfcAdapter.ACTION_TAG_DISCOVERED == intent.action) {
+        if (currentUser != null && (NfcAdapter.ACTION_NDEF_DISCOVERED == intent.action ||
+            NfcAdapter.ACTION_TAG_DISCOVERED == intent.action)) {
+
             val tag: Tag? = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)
             tag?.let {
-                val text = NfcManager.getTextFromNfc(it) ?: "Unknown Tag"
-                handleScan(text)
+                val id = NfcManager.getUniqueId(it)
+                handleScan(id)
             }
         }
     }

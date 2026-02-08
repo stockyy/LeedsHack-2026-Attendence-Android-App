@@ -13,9 +13,10 @@ import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import com.university.app.network.ApiClient
+import com.university.app.network.AuthResponse
 
 @Composable
-fun LoginScreen(onLoginSuccess: (Int, String) -> Unit) {
+fun LoginScreen(onLoginSuccess: (AuthResponse) -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
@@ -81,10 +82,10 @@ fun LoginScreen(onLoginSuccess: (Int, String) -> Unit) {
                         isLoading = true
                         errorMessage = null
                         // Call the API
-                        val user = ApiClient.login(email, password)
+                        val user = ApiClient.signIn(email, password)
                         if (user != null) {
-                            // Success! Trigger the callback with ID and Name
-                            onLoginSuccess(user.userId, user.userName)
+                            // Success! Trigger the callback with the full user object
+                            onLoginSuccess(user)
                         } else {
                             errorMessage = "Invalid email or password"
                         }
