@@ -34,12 +34,16 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    if (currentUser == null) {
-                        LoginScreen(onLoginSuccess = { user ->
-                            currentUser = user
+                    val user = currentUser
+                    if (user == null) {
+                        LoginScreen(onLoginSuccess = { newUser ->
+                            currentUser = newUser
                         })
                     } else {
-                        CheckInScreen()
+                        DashboardScreen(
+                            user = user,
+                            onLogout = { currentUser = null }
+                        )
                     }
                 }
             }
