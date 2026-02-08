@@ -103,12 +103,12 @@ class MainActivity : ComponentActivity() {
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Simulation Button for Testing
+            // Simulation Button for Testing - Using valid ID from Starling session
             Button(
-                onClick = { handleScan("COMP2850_LIVE") },
+                onClick = { handleScan("02335C41B6A000") },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Test Scan (COMP2850_LIVE)")
+                Text("Test Scan (Starling Module)")
             }
 
             Spacer(modifier = Modifier.height(16.dp))

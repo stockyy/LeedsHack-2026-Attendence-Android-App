@@ -3,6 +3,9 @@ package com.university.app
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EventAvailable
+import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,13 +37,24 @@ fun StatsScreen(studentId: Int, onBack: () -> Unit) {
                 Text("Failed to load statistics.")
             }
         } else {
-            OverallStatsCard(stats!!.overallAverage)
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Box(modifier = Modifier.weight(1f)) { PointsCard(stats!!.totalPoints) }
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(modifier = Modifier.weight(1f)) { AttendanceCard(stats!!.overallAttendance) }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            OverallQuizStatsCard(stats!!.overallAverage)
             Spacer(modifier = Modifier.height(24.dp))
             Text(text = "Module Breakdown", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(8.dp))
             LazyColumn(modifier = Modifier.weight(1f)) {
                 items(stats!!.moduleStats) { module ->
-                    ModuleStatsItem(module.moduleCode, module.averageScore, module.totalQuizzes)
+                    ModuleStatsItem(
+                        module.moduleCode,
+                        module.averageScore,
+                        module.totalQuizzes,
+                        module.attendancePercentage
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             }
@@ -53,13 +67,49 @@ fun StatsScreen(studentId: Int, onBack: () -> Unit) {
 }
 
 @Composable
-fun OverallStatsCard(overallAverage: Double) {
+fun PointsCard(points: Int) {
+    Card(
+        modifier = Modifier.fillMaxWidth().height(120.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp).fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(Icons.Default.Stars, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary)
+            Text(text = "Rewards", style = MaterialTheme.typography.labelMedium)
+            Text(text = "$points pts", style = MaterialTheme.typography.titleLarge)
+        }
+    }
+}
+
+@Composable
+fun AttendanceCard(percentage: Double) {
+    Card(
+        modifier = Modifier.fillMaxWidth().height(120.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp).fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(Icons.Default.EventAvailable, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
+            Text(text = "Attendance", style = MaterialTheme.typography.labelMedium)
+            Text(text = "${"%.0f".format(percentage)}%", style = MaterialTheme.typography.titleLarge)
+        }
+    }
+}
+
+@Composable
+fun OverallQuizStatsCard(overallAverage: Double) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
     ) {
         Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = "Overall Average Score", style = MaterialTheme.typography.titleMedium)
+            Text(text = "Overall Quiz Average", style = MaterialTheme.typography.titleMedium)
             Text(
                 text = "${"%.1f".format(overallAverage)}%",
                 style = MaterialTheme.typography.displayMedium,
@@ -70,22 +120,32 @@ fun OverallStatsCard(overallAverage: Double) {
 }
 
 @Composable
-fun ModuleStatsItem(moduleCode: String, averageScore: Double, totalQuizzes: Int) {
+fun ModuleStatsItem(moduleCode: String, averageScore: Double, totalQuizzes: Int, attendance: Double) {
     Card(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(text = moduleCode, style = MaterialTheme.typography.titleMedium)
-                Text(text = "$totalQuizzes quizzes completed", style = MaterialTheme.typography.bodySmall)
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = moduleCode, style = MaterialTheme.typography.titleLarge)
+                Text(
+                    text = "${"%.0f".format(attendance)}% Attended",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (attendance < 75) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                )
             }
-            Text(
-                text = "${"%.1f".format(averageScore)}%",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.primary
+            LinearProgressIndicator(
+                progress = { (attendance / 100).toFloat() },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(text = "$totalQuizzes Quizzes", style = MaterialTheme.typography.bodySmall)
+                Text(text = "Avg: ${"%.1f".format(averageScore)}%", style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }
