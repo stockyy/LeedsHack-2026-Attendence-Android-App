@@ -1,4 +1,5 @@
 package com.university.app.network
+import com.university.app.model.*
 
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
@@ -73,6 +74,28 @@ object ApiClient {
         } catch (e: Exception) {
             e.printStackTrace()
             false
+        }
+    }
+
+    // 3. GET QUIZ
+    suspend fun getQuiz(sessionId: Int): List<Question> {
+        return try {
+            client.get("$BASE_URL/api/quiz/$sessionId").body()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    // 4. SUBMIT RESULTS
+    suspend fun submitQuiz(studentId: Int, sessionId: Int, score: Int, total: Int) {
+        try {
+            client.post("$BASE_URL/api/quiz/submit") {
+                contentType(ContentType.Application.Json)
+                setBody(QuizSubmit(studentId, sessionId, score, total))
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 }

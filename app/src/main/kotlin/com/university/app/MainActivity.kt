@@ -36,8 +36,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    var showQuiz by remember { mutableStateOf(false) }
+                    val currentSessionId by remember { mutableStateOf(1) } // Default or passed from NFC
 
-                    // NAVIGATION LOGIC
                     if (_loggedInUserId.value == null) {
                         // 1. Show Login Screen
                         LoginScreen(onLoginSuccess = { userId, name ->
@@ -45,8 +46,17 @@ class MainActivity : ComponentActivity() {
                             _loggedInUserName.value = name
                         })
                     } else {
-                        // 2. Show NFC Screen (User is logged in)
-                        NfcScreen()
+                        // User is logged in
+                        if (showQuiz) {
+                            QuizScreen(
+                                sessionId = currentSessionId,
+                                studentId = _loggedInUserId.value ?: 0,
+                                onQuizFinished = { showQuiz = false }
+                            )
+                        } else {
+                            // Show screen with NFC and Quiz button
+                            NfcScreen(onStartQuiz = { showQuiz = true })
+                        }
                     }
                 }
             }
@@ -54,7 +64,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun NfcScreen() {
+    fun NfcScreen(onStartQuiz: () -> Unit) {
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center,
@@ -84,6 +94,11 @@ class MainActivity : ComponentActivity() {
             // Debug Button
             Button(onClick = { handleScan("COMP2850_LIVE") }) {
                 Text("Simulate Scan (Debug)")
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+            Button(onClick = onStartQuiz) {
+                Text("Start Post-Lecture Quiz")
             }
 
             // Logout Button (Optional but useful)
